@@ -1,0 +1,6 @@
+[flake8]
+indent-size = 2
+max-line-length = 88
+exclude =
+  .venv,
+  __pycache__
