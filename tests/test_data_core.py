@@ -5,41 +5,41 @@ from llm4series.data.ts import UniTimeSeries
 
 class TestTimeSeriesNormalize:
 
-    @pytest.fixture
-    def time_series_with_gaps(self):
-        dates = pd.DatetimeIndex(["2024-01-01", "2024-01-03", "2024-01-05"])
-        data = [1.0, 2.0, 3.0]
-        return UniTimeSeries(data, index=dates)
+  @pytest.fixture
+  def time_series_with_gaps(self):
+    dates = pd.DatetimeIndex(["2024-01-01", "2024-01-03", "2024-01-05"])
+    data = [1.0, 2.0, 3.0]
+    return UniTimeSeries(data, index=dates)
 
-    @pytest.fixture
-    def regular_time_series(self):
-        dates = pd.date_range("2024-01-01", periods=5, freq="D")
-        data = [1.0, 2.0, 3.0, 4.0, 5.0]
-        return UniTimeSeries(data, index=dates)
+  @pytest.fixture
+  def regular_time_series(self):
+    dates = pd.date_range("2024-01-01", periods=5, freq="D")
+    data = [1.0, 2.0, 3.0, 4.0, 5.0]
+    return UniTimeSeries(data, index=dates)
 
-    def test_normalize_with_explicit_freq(self, time_series_with_gaps):
-        result = time_series_with_gaps.normalize(freq="D")
-        assert len(result) == 5
-        assert result.iloc[0] == 1.0
-        assert result.iloc[2] == 2.0
-        assert result.iloc[4] == 3.0
+  def test_normalize_with_explicit_freq(self, time_series_with_gaps):
+    result = time_series_with_gaps.normalize(freq="D")
+    assert len(result) == 5
+    assert result.iloc[0] == 1.0
+    assert result.iloc[2] == 2.0
+    assert result.iloc[4] == 3.0
 
-    def test_normalize_with_inferred_freq(self, regular_time_series):
-        result = regular_time_series.normalize(freq=None)
-        assert len(result) == 5
+  def test_normalize_with_inferred_freq(self, regular_time_series):
+    result = regular_time_series.normalize(freq=None)
+    assert len(result) == 5
 
-    def test_normalize_custom_start_end(self, time_series_with_gaps):
-        result = time_series_with_gaps.normalize(
-            freq="D",
-            start="2024-01-01",
-            end="2024-01-07"
-        )
-        assert result.index[0] == pd.Timestamp("2024-01-01")
-        assert result.index[-1] == pd.Timestamp("2024-01-07")
+  def test_normalize_custom_start_end(self, time_series_with_gaps):
+    result = time_series_with_gaps.normalize(
+      freq="D",
+      start="2024-01-01",
+      end="2024-01-07"
+    )
+    assert result.index[0] == pd.Timestamp("2024-01-01")
+    assert result.index[-1] == pd.Timestamp("2024-01-07")
 
-    def test_normalize_raises_error_without_freq(self, time_series_with_gaps):
-        with pytest.raises(ValueError, match="infer frequency"):
-            time_series_with_gaps.normalize(freq=None)
+  def test_normalize_raises_error_without_freq(self, time_series_with_gaps):
+    with pytest.raises(ValueError, match="infer frequency"):
+      time_series_with_gaps.normalize(freq=None)
 
 
 class TestTimeSeriesSplit:
@@ -125,6 +125,23 @@ class TestTimeSeriesSlide:
         samples=2
     )
     assert len(windows) <= 2
+
+  def test_slide_rolling(self, longer_series):
+    windows = longer_series.slide(
+        method="rolling",
+        window=3,
+        samples=3
+    )
+    assert [window[0].tolist() for window in windows] == [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9],
+    ]
+    assert [window[1].tolist() for window in windows] == [
+        [4, 5, 6],
+        [7, 8, 9],
+        [10, 11, 12],
+    ]
 
   def test_slide_random(self, longer_series):
     windows = longer_series.slide(

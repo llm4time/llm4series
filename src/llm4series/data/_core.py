@@ -5,7 +5,7 @@ import random
 import os
 
 
-Sampling = Literal["frontend", "backend", "random", "uniform"]
+Sampling = Literal["frontend", "backend", "rolling", "random", "uniform"]
 TSFormat = Literal["array", "context", "csv", "custom", "json", "toon", "markdown", "plain", "symbol", "tsv"]
 TSType = Literal["numeric", "textual"]
 
@@ -434,11 +434,12 @@ class TimeSeries(ABC):
         method (Sampling): Sampling strategy. Supported methods:
             - 'frontend': Generates sequential windows from the beginning of the series.
             - 'backend': Generates sequential windows from the end of the series.
+            - 'rolling': Generates chained windows where each output becomes the next input.
             - 'random': Randomly selects starting points for windows.
             - 'uniform': Generates windows uniformly distributed across the series.
         window (int): Size of each window.
         samples (int): Total number of samples to generate.
-        step (int): Interval between starting points of windows.
+        step (int): Interval between starting points of windows. Used by 'uniform' and 'rolling'.
 
     Returns:
         list[tuple[TimeSeries, TimeSeries]]: List of (input, output) tuples, where each
@@ -446,7 +447,7 @@ class TimeSeries(ABC):
 
     Raises:
         ValueError: If the specified method is not supported:
-                    'frontend', 'backend', 'random', or 'uniform'.
+            'frontend', 'backend', 'rolling', 'random', or 'uniform'.
     """
     max_start = len(self) - 2 * window
 
@@ -457,6 +458,12 @@ class TimeSeries(ABC):
       total = len(self) // window - 1
       samples = min(samples, total)
       idxs = [len(self) - (samples - i) * 2 * window for i in range(samples)]
+
+    elif method == "rolling":
+      if max_start < 0 or samples <= 0:
+        return []
+      step = window if step is None else step
+      idxs = list(range(0, max_start + 1, step))[:samples]
 
     elif method == "random":
       if max_start < 0:
@@ -473,7 +480,7 @@ class TimeSeries(ABC):
         idxs = list(range(0, max_start + 1, step))[:samples]
 
     else:
-      raise ValueError('Supported methods: frontend, backend, random, uniform.')
+      raise ValueError('Supported methods: frontend, backend, rolling, random, uniform.')
 
     windows = []
     for idx in idxs:
