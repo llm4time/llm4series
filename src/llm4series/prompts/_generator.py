@@ -19,6 +19,30 @@ def prompt(
     stl: dict = None,
     **kwargs
 ) -> str:
+  """Generate a prompt for time series forecasting based on the specified template type.
+
+  Args:
+    type: Prompt template type. Options: 'zero_shot', 'few_shot', 'cot', 'cot_few', 'custom'.
+    ts: Time series data (UniTimeSeries or MultiTimeSeries).
+    tsformat: Format for representing the time series (e.g., array, csv, markdown).
+    tstype: Type of time series representation (e.g., values, datetime).
+    forecast_horizon: Number of future periods to forecast.
+    examples: Number of examples to include in few-shot prompts. Must be > 0 for few_shot/cot_few types.
+    sampling: Sampling method for selecting examples ('frontend', 'backend', 'random', 'uniform'). Defaults to 'backend'.
+    template: Custom prompt template string. Required only for 'custom' type.
+    stl: Optional dictionary containing STL decomposition components (trend strength, seasonality strength).
+    **kwargs: Additional format arguments to be passed to the template.
+
+  Returns:
+    str: Formatted prompt ready for use with language models.
+
+  Raises:
+    ValueError: If template is missing for 'custom' type, examples is 0 for few-shot types,
+                insufficient data for the requested examples, invalid sampling method,
+                or invalid prompt type.
+    TypeError: If ts is not a TimeSeries type.
+    KeyError: If a required key is missing from the prompt template.
+  """
   if template is None and type == "custom":
     raise ValueError("Template must be set for custom prompt.")
   if examples == 0 and type in ["few_shot", "cot_few"]:
@@ -32,6 +56,17 @@ def prompt(
   base_kwargs.update(kwargs)
 
   def _statistics(series, stl_col=None):
+    """Calculate and format statistical summary of a time series.
+
+    Args:
+      series: Time series data to compute statistics for.
+      stl_col: Optional dictionary containing STL decomposition components for the series.
+               Can include 't_strength' (trend strength) and 's_strength' (seasonality strength).
+
+    Returns:
+      str: Formatted string containing statistical measures (mean, median, std, min, max, quartiles,
+           and optional STL components) separated by newlines.
+    """
     lines = [
         f"- Mean: {series.mean()}",
         f"- Median: {series.median()}",
