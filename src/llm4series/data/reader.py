@@ -5,6 +5,19 @@ from .ts import UniTimeSeries, MultiTimeSeries
 
 
 def _parse_date_column(col: pd.Series) -> pd.Series:
+  """Parse a date column and convert it to datetime format.
+  
+  Intelligently detects date format by examining the first 10 non-null values.
+  Supports ISO format (YYYY-MM-DD) and various date separators. Automatically
+  determines whether dates use day-first or month-first convention based on
+  component values.
+  
+  Args:
+      col (pd.Series): Series containing date values in string or mixed formats.
+  
+  Returns:
+      pd.Series: Series converted to datetime format. Invalid dates are coerced to NaT.
+  """
   sample = col.dropna().astype(str).head(10)
   def looks_iso(val: str) -> bool:
     return len(val) >= 10 and val[4] in ("-", "/") and val[7] in ("-", "/")
@@ -25,6 +38,31 @@ def _parse_date_column(col: pd.Series) -> pd.Series:
 
 
 def read_file(path_or_df: str | pd.DataFrame, index_col: str = None) -> MultiTimeSeries | UniTimeSeries:
+  """Read time series data from various file formats or pandas DataFrame.
+  
+  Loads data from CSV, Excel, JSON, or Parquet files (or a pandas DataFrame)
+  and converts it into a TimeSeries object. Automatically detects and parses
+  date columns to create a datetime index. Returns UniTimeSeries for single-column
+  data or MultiTimeSeries for multi-column data.
+  
+  Args:
+      path_or_df (str | pd.DataFrame): File path to read from (supports .csv, .xlsx, .json, .parquet)
+                                       or a pandas DataFrame to convert.
+      index_col (str, optional): Name of the column to use as index. If None, defaults to 'date' column.
+                                Defaults to None.
+  
+  Returns:
+      MultiTimeSeries | UniTimeSeries: UniTimeSeries if data has a single column,
+                                       MultiTimeSeries if data has multiple columns.
+                                       Index is sorted in ascending order if necessary.
+                                       Datetime frequency is automatically inferred.
+  
+  Raises:
+      ValueError: If input is not a valid file path or DataFrame, if no index_col is specified
+                 and no 'date' column exists, or if specified index_col doesn't exist.
+      FileNotFoundError: If the specified file path does not exist.
+      Exception: For unexpected errors during file reading.
+  """
   try:
     if isinstance(path_or_df, pd.DataFrame):
       df = path_or_df.copy()

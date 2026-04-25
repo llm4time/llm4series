@@ -25,10 +25,37 @@ from ..data import TimeSeries, TSFormat
 
 
 def encode_textual(ts: TimeSeries) -> TimeSeries:
+  """Encode a TimeSeries to textual format.
+  
+  Converts a TimeSeries object to a textual representation suitable for
+  LLM processing.
+  
+  Args:
+      ts (TimeSeries): The time series to encode.
+  
+  Returns:
+      TimeSeries: Encoded time series in textual format.
+  """
   return _encode_textual(ts)
 
 
 def from_str(string: str, format: TSFormat) -> TimeSeries:
+  """Parse a TimeSeries from a string in the specified format.
+  
+  Converts a string representation to a TimeSeries object. Supports multiple
+  formats including CSV, JSON, Markdown, plain text, and domain-specific formats.
+  
+  Args:
+      string (str): String representation of the time series.
+      format (TSFormat): Format of the input string ('array', 'csv', 'json', 'markdown',
+                         'plain', 'context', 'custom', 'symbol', 'toon', 'tsv').
+  
+  Returns:
+      TimeSeries: Parsed time series object (UniTimeSeries or MultiTimeSeries).
+  
+  Raises:
+      ValueError: If format is unknown or string cannot be parsed in that format.
+  """
   formats_map = {
     "array": _from_array,
     "context": _from_context,

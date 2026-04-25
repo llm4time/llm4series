@@ -4,6 +4,21 @@ import re
 
 
 def _encode_textual(ts: TimeSeries) -> TimeSeries:
+  """Encode TimeSeries values to textual format with spaced characters.
+  
+  Converts numeric values to strings with spaces between each character,
+  useful for LLM processing. Preserves NaN values. Works with both univariate
+  and multivariate time series.
+  
+  Args:
+      ts (TimeSeries): UniTimeSeries or MultiTimeSeries to encode.
+  
+  Returns:
+      TimeSeries: Time series with values converted to spaced text format.
+  
+  Raises:
+      TypeError: If input is not a TimeSeries, UniTimeSeries, or MultiTimeSeries.
+  """
   ts = ts.copy()
   def encode(v):
     if pd.isna(v):
@@ -22,6 +37,22 @@ def _encode_textual(ts: TimeSeries) -> TimeSeries:
 
 
 def _decode_textual(ts: TimeSeries) -> TimeSeries:
+  """Decode textual TimeSeries back to numeric format when possible.
+  
+  Converts spaced text values back to numeric format using regex pattern matching.
+  Matches numeric patterns (digits, dots, hyphens, spaces) and converts them to floats.
+  Non-numeric values are preserved as-is. Works with both univariate and multivariate
+  time series.
+  
+  Args:
+      ts (TimeSeries): UniTimeSeries or MultiTimeSeries to decode.
+  
+  Returns:
+      TimeSeries: Time series with textual values converted back to numeric format where possible.
+  
+  Raises:
+      TypeError: If input is not a TimeSeries, UniTimeSeries, or MultiTimeSeries.
+  """
   ts = ts.copy()
   def decode(v):
     s = str(v).strip()
