@@ -22,7 +22,7 @@ setup(name="llm4series",
       long_description_content_type="text/markdown",
       keywords=["Time Series Forecasting", "Large Language Model", "Prompt Engineering"],
       description="A library for time series forecasting with language models (LLMs)",
-      python_requires=">=3.11, <3.14",
+      python_requires=">=3.12, <3.14",
       packages=find_packages(where="src"),
       package_dir={"": "src"},
       install_requires=[
