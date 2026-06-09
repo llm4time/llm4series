@@ -13,6 +13,7 @@
 
 <p align="center">
   <a href="#get-started">Get Started</a> •
+  <a href="https://llm4time.github.io/llm4series/">Documentation</a> •
   <a href="#citation">Citation</a> •
   <a href="#collaborators">Collaborators</a> •
   <a href="#license">License</a>

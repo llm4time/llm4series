@@ -6,6 +6,10 @@ from .prompts import prompt, PromptType
 from .utils import linechart, lineplot, barplot, plot
 from ._version import __version__
 
+import logging
+logging.getLogger("kaleido").setLevel(logging.CRITICAL)
+logging.getLogger("choreographer").setLevel(logging.CRITICAL)
+
 __all__ = [
   'UniTimeSeries',
   'MultiTimeSeries',
