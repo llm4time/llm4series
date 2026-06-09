@@ -12,10 +12,10 @@
 </div>
 
 <p align="center">
-  <a href="#-get-started">Get Started</a> •
-  <a href="#-citation">Citation</a> •
-  <a href="#-collaborators">Collaborators</a> •
-  <a href="#-license">License</a>
+  <a href="#get-started">Get Started</a> •
+  <a href="#citation">Citation</a> •
+  <a href="#collaborators">Collaborators</a> •
+  <a href="#license">License</a>
 </p>
 
 ## Get Started
