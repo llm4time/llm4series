@@ -134,6 +134,9 @@ html_theme_options = {
             "icon": "fab fa-github",
         },
     ],
+
+    "pygments_light_style": "vs",
+    "pygments_dark_style": "native",
 }
 
 html_sidebars = {
@@ -147,10 +150,3 @@ html_css_files = [
 ]
 
 html_show_sourcelink = False
-
-# -----------------------------------------------------------------------------
-# Syntax Highlight
-# -----------------------------------------------------------------------------
-
-pygments_style = "sphinx"
-pygments_dark_style = "monokai"
