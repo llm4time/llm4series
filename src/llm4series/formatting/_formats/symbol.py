@@ -2,6 +2,7 @@ import pandas as pd
 from io import StringIO
 from ...data import TimeSeries, read_file
 from ...data import UniTimeSeries, MultiTimeSeries
+from ..._internal import logger
 
 
 def _to_symbol(ts: TimeSeries) -> str:
@@ -42,6 +43,7 @@ def _to_symbol(ts: TimeSeries) -> str:
       lines.append(f"{idx}," + ",".join(row_parts))
       prev_row = row
   else:
+    logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
   return header + "\n" + "\n".join(lines)
 

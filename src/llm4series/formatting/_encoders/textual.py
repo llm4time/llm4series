@@ -1,4 +1,5 @@
 from ...data import TimeSeries, UniTimeSeries, MultiTimeSeries
+from ..._internal import logger
 import pandas as pd
 import re
 
@@ -17,6 +18,7 @@ def _encode_textual(ts: TimeSeries) -> TimeSeries:
       ts[col] = ts[col].astype(object)
       ts[col] = ts[col].apply(encode)
   else:
+    logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
   return ts
 
@@ -34,5 +36,6 @@ def _decode_textual(ts: TimeSeries) -> TimeSeries:
     for col in ts.columns:
       ts[col] = ts[col].apply(decode)
   else:
+    logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
   return ts

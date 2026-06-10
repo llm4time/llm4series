@@ -2,6 +2,7 @@ import pandas as pd
 from io import StringIO
 from ...data import TimeSeries, read_file
 from ...data import UniTimeSeries, MultiTimeSeries
+from ..._internal import logger
 import re
 
 
@@ -13,6 +14,7 @@ def _to_context(ts: TimeSeries) -> str:
     header = f"{(ts.index.name or "index")},{",".join(ts.columns)}"
     values = ts.to_numpy().tolist()
   else:
+    logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
   lines = [f"{idx}," + ",".join(f"[{v}]" for v in row)
            for idx, row in zip(ts.index, values)]

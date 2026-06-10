@@ -1,7 +1,7 @@
 import os
 import pandas as pd
-from llm4series._internal import logger
 from .ts import UniTimeSeries, MultiTimeSeries
+from .._internal import logger
 
 
 def _parse_date_column(col: pd.Series) -> pd.Series:

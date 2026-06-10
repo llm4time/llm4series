@@ -2,6 +2,7 @@ import pandas as pd
 from toon import decode
 from ...data import TimeSeries, read_file
 from ...data import UniTimeSeries, MultiTimeSeries
+from ..._internal import logger
 import toon
 
 
@@ -17,6 +18,7 @@ def _to_toon(ts: TimeSeries) -> str:
         for idx, row in zip(ts.index, ts.to_numpy().tolist())
     ]
   else:
+    logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
   return toon.encode(data)
 

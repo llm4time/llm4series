@@ -2,6 +2,7 @@ import pandas as pd
 from io import StringIO
 from ...data import TimeSeries, read_file
 from ...data import UniTimeSeries, MultiTimeSeries
+from ..._internal import logger
 
 
 def _to_plain(ts: TimeSeries) -> str:
@@ -12,6 +13,7 @@ def _to_plain(ts: TimeSeries) -> str:
     values = ts.to_numpy().tolist()
     columns = ts.columns
   else:
+    logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
   lines = [
       f"{(ts.index.name or "index")}: {idx}, " +
@@ -24,16 +26,21 @@ def _to_plain(ts: TimeSeries) -> str:
 def _from_plain(string: str) -> TimeSeries:
   try:
     if not string or not string.strip():
-      raise ValueError("Input string cannot be empty")
+      logger.error("Input string cannot be empty.")
+      raise ValueError("Input string cannot be empty.")
     data = [{k.strip(): v.strip() for k, v in (p.split(":", 1) for p in line.split(","))}
             for line in string.strip().splitlines()]
     if not data:
-      raise ValueError("No valid data parsed from input")
+      logger.error("No valid data parsed from input.")
+      raise ValueError("No valid data parsed from input.")
     df = pd.read_csv(StringIO(pd.DataFrame(data).to_csv(index=False)))
     if df.empty:
-      raise ValueError("DataFrame cannot be empty")
+      logger.error("DataFrame cannot be empty.")
+      raise ValueError("DataFrame cannot be empty.")
     return read_file(df, index_col=df.columns[0])
   except (ValueError, KeyError, IndexError) as e:
+    logger.error(f"Error parsing plain format: {e}.")
     raise ValueError(f"Error parsing plain format: {e}")
   except Exception as e:
+    logger.error(f"Unexpected error parsing plain format: {e}.")
     raise ValueError(f"Unexpected error parsing plain format: {e}")

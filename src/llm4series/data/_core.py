@@ -1,5 +1,6 @@
-from typing import Self, Literal
+from typing import get_args, Self, Literal
 from abc import ABC, abstractmethod
+from .._internal import logger
 import pandas as pd
 import random
 import os
@@ -388,6 +389,7 @@ class TimeSeries(ABC):
     if freq is None:
       freq = self.index.freq
       if freq is None:
+        logger.error("Error trying to infer frequency automatically.")
         raise ValueError("Error trying to infer frequency automatically.")
 
     full_idx = pd.date_range(start=start_date, end=end_date, freq=freq)
@@ -412,7 +414,8 @@ class TimeSeries(ABC):
     """
     if test_size is not None:
         if not (0 < test_size < 1):
-            raise ValueError("Error: `test_size` must be between 0 and 1.")
+          logger.error(f"Invalid test_size: {test_size}. Must be between 0 and 1.")
+          raise ValueError(f"Invalid test_size: {test_size}. Must be between 0 and 1.")
         idx = int(len(self) * (1 - test_size))
         train = self.iloc[:idx]
         test = self.iloc[idx:] if periods is None else self.iloc[idx:][:periods]
@@ -480,7 +483,8 @@ class TimeSeries(ABC):
         idxs = list(range(0, max_start + 1, step))[:samples]
 
     else:
-      raise ValueError('Supported methods: frontend, backend, rolling, random, uniform.')
+      logger.error(f"Invalid sampling method: {method}. Supported methods: {get_args(Sampling)}.")
+      raise ValueError(f"Invalid sampling method: {method}. Supported methods: {get_args(Sampling)}.")
 
     windows = []
     for idx in idxs:
@@ -535,10 +539,12 @@ class TimeSeries(ABC):
         "tsv": fmt._to_tsv,
     }
     if format not in formats_map:
-      raise ValueError(f"Unknown format: {format}.")
+      logger.error(f"Unknown format: {format}. Supported formats: {get_args(TSFormat)}.")
+      raise ValueError(f"Unknown format: {format}. Supported formats: {get_args(TSFormat)}.")
     try:
       return formats_map[format](ts)
     except Exception:
+      logger.error(f"Failed to convert TimeSeries to format {format}.")
       raise ValueError(f"Failed to convert TimeSeries to format {format}.")
 
   def to_file(self: Self, path: str) -> None:
@@ -565,4 +571,5 @@ class TimeSeries(ABC):
     elif ext == ".parquet":
       self.to_parquet(path, index=True)
     else:
-      raise ValueError(f"Supported extensions: .csv, .xlsx, .json, .parquet")
+      logger.error(f"Unsupported file extension: {ext}. Supported extensions: .csv, .xlsx, .json, .parquet.")
+      raise ValueError(f"Unsupported file extension: {ext}. Supported extensions: .csv, .xlsx, .json, .parquet.")

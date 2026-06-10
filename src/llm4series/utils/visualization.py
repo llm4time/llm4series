@@ -1,6 +1,7 @@
 from ..data import TimeSeries, UniTimeSeries, MultiTimeSeries
 import plotly.graph_objects as go
 from typing import Sequence, Literal
+from .._internal import logger
 import plotly.express as px
 import pandas as pd
 import colorsys
@@ -40,6 +41,7 @@ def _get_groups(
   elif len(groups) == 1:
     return groups * len(series)
   elif len(groups) != len(series):
+    logger.error(f"Number of groups ({len(groups)}) must match number of series ({len(series)}).")
     raise ValueError("The number of groups must match the number of series provided.")
   return groups
 
@@ -71,6 +73,7 @@ def linechart(
         fig.add_trace(go.Scatter(
             x=s.index, y=s[c], mode="lines", name=name, line=dict(color=color)))
     else:
+      logger.error(f"Unsupported type for linechart: {type(s).__name__}")
       raise TypeError(f"Type not supported: {type(s).__name__}.")
   fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=showlegend, **kwargs)
   return fig
@@ -103,6 +106,7 @@ def lineplot(
         fig.add_trace(go.Scatter(
             x=list(range(len(s))), y=s[c], mode="lines", name=name, line=dict(color=color)))
     else:
+      logger.error(f"Unsupported type for lineplot: {type(s).__name__}")
       raise TypeError(f"Type not supported: {type(s).__name__}.")
   fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=showlegend, **kwargs)
   return fig
@@ -151,6 +155,7 @@ def barplot(
         fig.add_trace(go.Bar(x=x or s.index.astype(str),
                              y=s[c].values, name=name, marker_color=color))
     else:
+      logger.error(f"Unsupported type for barplot: {type(s).__name__}")
       raise TypeError(f"Type not supported: {type(s).__name__}.")
   fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title=ylabel, barmode="group", **kwargs)
   return fig
@@ -173,4 +178,5 @@ def plot(
     case "bar":
       return barplot(*series, title=title, xlabel=xlabel, ylabel=ylabel, groups=groups, **kwargs)
     case _:
+      logger.error(f"Invalid kind: {kind}. Choose from 'line', 'chart', 'bar'.")
       raise ValueError(f"Invalid kind: {kind}. Choose from 'line', 'chart', 'bar'.")

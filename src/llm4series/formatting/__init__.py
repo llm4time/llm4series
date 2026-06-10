@@ -28,6 +28,27 @@ def encode_textual(ts: TimeSeries) -> TimeSeries:
   return _encode_textual(ts)
 
 
+def to_str(ts: TimeSeries, format: TSFormat) -> str:
+  formats_map = {
+    "array": _to_array,
+    "context": _to_context,
+    "csv": _to_csv,
+    "custom": _to_custom,
+    "json": _to_json,
+    "markdown": _to_markdown,
+    "plain": _to_plain,
+    "symbol": _to_symbol,
+    "toon": _to_toon,
+    "tsv": _to_tsv,
+  }
+  if format not in formats_map:
+    raise ValueError(f"Unknown format: {format}.")
+  try:
+    return formats_map[format](_decode_textual(ts))
+  except Exception:
+    raise ValueError(f"Failed to convert TimeSeries to format {format}.")
+
+
 def from_str(string: str, format: TSFormat) -> TimeSeries:
   formats_map = {
     "array": _from_array,
@@ -48,4 +69,4 @@ def from_str(string: str, format: TSFormat) -> TimeSeries:
   except Exception:
     raise ValueError(f"Failed to parse TimeSeries from format {format}.")
 
-__all__ = ['from_str', 'encode_textual']
+__all__ = ['to_str', 'from_str', 'encode_textual']

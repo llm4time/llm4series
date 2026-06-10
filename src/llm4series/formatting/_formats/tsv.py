@@ -2,6 +2,7 @@ import pandas as pd
 from io import StringIO
 from ...data import TimeSeries, read_file
 from ...data import UniTimeSeries, MultiTimeSeries
+from ..._internal import logger
 
 
 def _to_tsv(ts: TimeSeries) -> str:
@@ -12,6 +13,7 @@ def _to_tsv(ts: TimeSeries) -> str:
     header = (ts.index.name or "index") + "\t" + "\t".join(map(str, ts.columns))
     values = ts.to_numpy().tolist()
   else:
+    logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
 
   lines = [

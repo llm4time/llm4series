@@ -1,8 +1,9 @@
 from ._templates import *
 from dataclasses import dataclass
-from typing import Literal, Type
+from typing import get_args, Literal, Type
 from pydantic import BaseModel, Field, create_model, conlist
 from datetime import datetime
+from .._internal import logger
 import llm4series.data as ls
 import pandas as pd
 
@@ -28,26 +29,64 @@ class PromptConfig:
 def prompt(
     type: PromptType,
     ts: ls.TimeSeries,
-    tsformat: ls.TSFormat,
-    tstype: ls.TSType,
     forecast_horizon: int,
+    tsformat: ls.TSFormat = "csv",
+    tstype: ls.TSType = "numeric",
+    sampling: ls.Sampling = "uniform",
     examples: int = 0,
-    sampling: ls.Sampling = None,
     template: str = None,
     stl: dict = None,
     decimals: int = 3,
     **kwargs
 ) -> str:
-  ts = ts.round(decimals)
+  prompt_map = {
+      "zero_shot": ZERO_SHOT,
+      "few_shot": FEW_SHOT,
+      "cot_few": COT_FEW,
+      "cot": COT,
+      "custom": template
+  }
+  if type not in prompt_map:
+    logger.error(f"Invalid prompt type: {type}.")
+    raise ValueError("Supported prompts: zero_shot, few_shot, cot, cot_few, custom.")
+
+  if forecast_horizon <= 0:
+    logger.error(f"Invalid forecast horizon: {forecast_horizon}. Must be a positive integer.")
+    raise ValueError("Forecast horizon must be a positive integer.")
+
+  if tsformat not in get_args(ls.TSFormat):
+    logger.error(f"Invalid time series format: {tsformat}.")
+    raise ValueError(f"Supported time series formats: {', '.join(get_args(ls.TSFormat))}.")
+
+  if tstype not in get_args(ls.TSType):
+    logger.error(f"Invalid time series type: {tstype}.")
+    raise ValueError(f"Supported time series types: {', '.join(get_args(ls.TSType))}.")
+
+  if sampling not in get_args(ls.Sampling):
+    logger.error(f"Invalid sampling method: {sampling}.")
+    raise ValueError(f"Supported samplings: {', '.join(get_args(ls.Sampling))}.")
 
   if template is None and type == "custom":
+    logger.error("Template must be provided for custom prompt type.")
     raise ValueError("Template must be set for custom prompt.")
+
   if examples == 0 and type in ["few_shot", "cot_few"]:
+    logger.error("Must contain at least 1 example.")
     raise ValueError("Must contain at least 1 example.")
+
+  min_periods = forecast_horizon * 2 * examples
+  if len(ts) < min_periods:
+    logger.error(f"Not enough data points: {len(ts)}. Required at least {min_periods} for {examples} examples and forecast horizon of {forecast_horizon}.")
+    raise ValueError(f"For {examples} examples there must be {min_periods} periods in the time series.")
+
+  if decimals <= 0:
+    logger.error(f"Invalid decimals: {decimals}. Must be a non-negative integer.")
+    raise ValueError("Decimals must be a non-negative integer.")
+
+  ts = ts.round(decimals)
 
   base_kwargs = {
       "input_len": len(ts),
-      "output_example": ts[:forecast_horizon].to_str(tsformat, tstype),
       "forecast_horizon": forecast_horizon,
   }
   base_kwargs.update(kwargs)
@@ -85,19 +124,8 @@ def prompt(
       rows.append(header + _statistics(ts[col], stl_col))
     base_kwargs["statistics"] = "\n".join(rows)
   else:
+    logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
-
-  min_periods = forecast_horizon * 2 * examples
-  if len(ts) < min_periods:
-    raise ValueError(
-        f"For {examples} examples there must be {min_periods} periods in the time series.")
-
-  try:
-    sampling = sampling or "backend"
-    if sampling not in ["frontend", "backend", "random", "uniform"]:
-      raise ValueError()
-  except ValueError:
-    raise ValueError("Supported samplings: frontend, backend, random, uniform.")
 
   if "forecast_examples" not in kwargs:
     forecast_examples = "\n".join([
@@ -111,16 +139,6 @@ def prompt(
     ])
     base_kwargs.update({"forecast_examples": forecast_examples})
 
-  prompt_map = {
-      "zero_shot": ZERO_SHOT,
-      "few_shot": FEW_SHOT,
-      "cot_few": COT_FEW,
-      "cot": COT,
-      "custom": template
-  }
-  if type not in prompt_map:
-    raise ValueError("Supported prompts: zero_shot, few_shot, cot, cot_few, custom.")
-
   try:
     system = SYSTEM.format(**base_kwargs)
     text = prompt_map[type].format(**base_kwargs)
@@ -129,4 +147,5 @@ def prompt(
     response_format = make_response_format(columns, forecast_horizon)
     return PromptConfig(system=system, text=text, data=data, response_format=response_format)
   except KeyError as e:
+    logger.error(f"Missing key in template: {e}.")
     raise ValueError(f"Key {e} not defined.")

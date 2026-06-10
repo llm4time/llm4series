@@ -1,4 +1,5 @@
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error
+from .._internal import logger
 import pandas as pd
 import numpy as np
 
@@ -19,6 +20,7 @@ class Metrics:
     valid_types = (pd.DataFrame, pd.Series, list)
     if not (isinstance(y_true, valid_types) and isinstance(y_pred, valid_types)) or \
       (isinstance(y_true, pd.DataFrame) != isinstance(y_pred, pd.DataFrame)):
+      logger.error(f"Invalid input types: {type(y_true).__name__} and {type(y_pred).__name__}.")
       raise TypeError(f"Invalid input types: {type(y_true).__name__} and {type(y_pred).__name__}.")
 
   def _drop_nan(self, y_true, y_pred) -> tuple[np.ndarray, np.ndarray]:

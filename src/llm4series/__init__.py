@@ -9,6 +9,7 @@ from ._version import __version__
 import logging
 logging.getLogger("kaleido").setLevel(logging.CRITICAL)
 logging.getLogger("choreographer").setLevel(logging.CRITICAL)
+logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 
 __all__ = [
   'UniTimeSeries',

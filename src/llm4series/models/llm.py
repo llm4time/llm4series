@@ -1,31 +1,25 @@
-from openai import OpenAI as Client
-from openai import AzureOpenAI as AzureClient
+from litellm import completion
 from ._base import Model, ModelResponse
 from ..prompts._generator import PromptConfig
 from ..data import UniTimeSeries, MultiTimeSeries
+from .._internal import logger
 from typing import override
 import time
+import json
 
 
 class LLM(Model):
 
-  def __init__(self, model: str, api_key: str = None, base_url: str = None,
-               local: bool = False, azure: bool = False, **kwargs) -> None:
+  def __init__(self, model: str, api_key: str = None, base_url: str = None, **kwargs) -> None:
     self.model = model
-    if local and azure:
-      raise ValueError("Model cannot be both local and Azure.")
-    if not local and not api_key:
-      raise ValueError("API key must be provided for non-local models.")
-    if azure:
-      self.client = AzureClient(api_key=api_key, azure_endpoint=base_url, **kwargs)
-    elif local:
-      self.client = Client(api_key="local", base_url=base_url or "http://localhost:1234/v1", **kwargs)
-    else:
-      self.client = Client(api_key=api_key, base_url=base_url or "https://api.openai.com/v1", **kwargs)
+    self.api_key = api_key
+    self.base_url = base_url
+    self.kwargs = kwargs
 
   @override
   def predict(self, prompt: PromptConfig, **kwargs):
     if not isinstance(prompt, PromptConfig):
+      logger.error(f"Expected PromptConfig, got {type(prompt).__name__}.")
       raise ValueError(f"Expected PromptConfig, got {type(prompt).__name__}.")
 
     start_time = time.time()
@@ -39,25 +33,80 @@ class LLM(Model):
       **kwargs
     )
     end_time = time.time()
-    return self._build_response(response, end_time - start_time)
+
+    return self._build_response(
+      response=response,
+      response_model=prompt.response_format,
+      execution_time=end_time - start_time
+    )
 
   def chat(self, messages, response_format=None, **kwargs):
-    if response_format:
-      return self.client.beta.chat.completions.parse(model=self.model, messages=messages, response_format=response_format, **kwargs)
-    else:
-      return self.client.beta.chat.completions.create(model=self.model, messages=messages, **kwargs)
+    params = {
+        "model": self.model,
+        "messages": messages,
+        **self.kwargs,
+        **kwargs
+    }
 
-  def _build_response(self, response, execution_time):
+    if self.api_key:
+        params["api_key"] = self.api_key
+
+    if self.base_url:
+        params["api_base"] = self.base_url
+
+    if response_format:
+        params["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": response_format.__name__,
+                "schema": response_format.model_json_schema()
+            }
+        }
+    logger.info(f"[{params['model']}] Sending request...")
+    start_time = time.time()
+    response = completion(**params)
+    end_time = time.time() - start_time
+    logger.info(f"[{params['model']}] Response received in {end_time:.2f}s.")
+    return response
+
+  def _build_response(self, response, response_model, execution_time):
     usage = getattr(response, "usage", None)
+
+    if usage is None:
+      logger.warning("LLM response does not contain usage information.")
+
     input_tokens = getattr(usage, "prompt_tokens", None)
     output_tokens = getattr(usage, "completion_tokens", None)
-    choice = response.choices[0]
-    message = getattr(choice, "message", None)
-    parsed = getattr(message, "parsed", None) if message else None
-    if parsed is None:
-      raise ValueError("Response does not contain a parsable message.")
+
+    if input_tokens is None:
+      logger.warning("LLM response does not contain prompt_tokens.")
+
+    if output_tokens is None:
+      logger.warning("LLM response does not contain completion_tokens.")
+
+    content = response.choices[0].message.content
+
+    if content is None:
+      logger.warning("LLM response content is None.")
+      raise ValueError("LLM response content is None.")
+
+    try:
+      parsed = response_model.model_validate_json(content)
+    except Exception as e:
+      parsed = response_model.model_validate(json.loads(content))
+
     data = parsed.model_dump()
-    index = data.pop("date")
+
+    index = data.pop("date", None)
+
+    if index is None:
+      logger.warning("Response model does not contain required 'date' field.")
+      raise ValueError("Response model does not contain required 'date' field.")
+
+    if not data:
+      logger.warning("Response model contains no prediction columns.")
+      raise ValueError("Response model contains no prediction columns.")
+
     if len(data) > 1:
       prediction = MultiTimeSeries(data, index=index)
       prediction.index.name = "date"
@@ -65,5 +114,10 @@ class LLM(Model):
       column_name, values = next(iter(data.items()))
       prediction = UniTimeSeries(values, index=index, name=column_name)
       prediction.index.name = "date"
-    return ModelResponse(prediction=prediction, input_tokens=input_tokens,
-        output_tokens=output_tokens, time=execution_time)
+
+    return ModelResponse(
+      prediction=prediction,
+      input_tokens=input_tokens,
+      output_tokens=output_tokens,
+      time=execution_time
+    )

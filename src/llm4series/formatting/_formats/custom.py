@@ -2,6 +2,7 @@ import pandas as pd
 from io import StringIO
 from ...data import TimeSeries, read_file
 from ...data import UniTimeSeries, MultiTimeSeries
+from ..._internal import logger
 
 
 def _to_custom(ts: TimeSeries, sep: str = "|") -> str:
@@ -12,6 +13,7 @@ def _to_custom(ts: TimeSeries, sep: str = "|") -> str:
     header = f"{(ts.index.name or "index")}{sep}" + sep.join(ts.columns)
     values = ts.to_numpy().tolist()
   else:
+    logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
   lines = [f"{idx}{sep}" + sep.join(str(v) for v in row)
            for idx, row in zip(ts.index, values)]

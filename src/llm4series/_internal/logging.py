@@ -1,16 +1,28 @@
 import logging
+from colorlog import ColoredFormatter
 import os
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 IS_DEV = os.getenv("ENVIRONMENT", "production") == "development"
 
-format_str = "[%(levelname)-8s] %(asctime)s - %(name)s:%(funcName)s:%(lineno)d - %(message)s" if IS_DEV \
-             else "[%(levelname)s] %(message)s"
+LOG_COLORS = {
+    "DEBUG":    "cyan",
+    "INFO":     "green",
+    "WARNING":  "yellow",
+    "ERROR":    "red",
+    "CRITICAL": "bold_red",
+}
 
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format=format_str,
-    datefmt="%Y-%m-%d %H:%M:%S"
+format_str = (
+    "%(log_color)s[%(levelname)-8s]%(reset)s %(asctime)s - %(name)s:%(funcName)s:%(lineno)d - %(message)s"
+    if IS_DEV else
+    "%(log_color)s[%(levelname)s]%(reset)s %(message)s"
 )
 
+handler = logging.StreamHandler()
+handler.setFormatter(ColoredFormatter(format_str, log_colors=LOG_COLORS))
+
 logger = logging.getLogger("llm4series")
+logger.setLevel(LOG_LEVEL)
+logger.addHandler(handler)
+logger.propagate = False

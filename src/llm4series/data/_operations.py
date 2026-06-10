@@ -6,6 +6,7 @@ from typing import override, Callable
 from statsmodels.tsa.seasonal import STL
 from statsmodels.tsa.stattools import adfuller, acf, pacf
 from ._core import TimeSeries, TimeSeriesImputation, TimeSeriesStatistics, TimeSeriesMetrics, TimeSeriesPlot
+from .._internal import logger
 
 
 class _UniTimeSeriesImputation(TimeSeriesImputation):
@@ -48,11 +49,13 @@ class _UniTimeSeriesImputation(TimeSeriesImputation):
   @override
   def impute_interpolate(self, method: str = 'linear', order: int = 2, inplace: bool = False) -> TimeSeries | None:
     if method not in ('linear', 'spline'):
+      logger.error(f"Invalid interpolation method: {method}. Supported methods: linear or spline.")
       raise ValueError("Supported methods: linear or spline.")
     ts = self if inplace else self.copy()
     try:
       ts.interpolate(method=method if method == 'linear' else 'spline', order=order if method == 'spline' else None, inplace=True)
     except (ValueError, TypeError):
+      logger.error(f"Interpolation failed for method: {method}. Using linear interpolation.")
       ts.interpolate(method='linear', inplace=True)
     ts.impute_ffill(inplace=True)
     return None if inplace else ts
@@ -106,6 +109,7 @@ class _MultiTimeSeriesImputation(TimeSeriesImputation):
   @override
   def impute_interpolate(self, method: str = 'linear', order: int = 2, inplace: bool = False) -> TimeSeries | None:
     if method not in ('linear', 'spline'):
+      logger.error(f"Invalid interpolation method: {method}. Supported methods: linear or spline.")
       raise ValueError("Supported methods: linear or spline.")
     ts = self if inplace else self.copy()
     try:
@@ -114,6 +118,7 @@ class _MultiTimeSeriesImputation(TimeSeriesImputation):
         interp_kwargs['order'] = order
       ts[self.num_columns] = ts[self.num_columns].interpolate(**interp_kwargs)
     except (ValueError, TypeError):
+      logger.error(f"Interpolation failed for method: {method}. Using linear interpolation.")
       ts[self.num_columns] = ts[self.num_columns].interpolate(method='linear')
     ts.impute_ffill(inplace=True)
     return None if inplace else ts
@@ -122,16 +127,19 @@ class _MultiTimeSeriesImputation(TimeSeriesImputation):
 class _UniTimeSeriesStatistics(TimeSeriesStatistics):
 
   @override
-  def stl(self, period: int = None, freq: str = None, decimals: int = 4) -> pd.Series | None:
-    from .._internal import logger
+  def stl(self, freq: str = None, period: int = None, decimals: int = 4) -> pd.Series | None:
     if hasattr(self.index, 'dtype') and pd.api.types.is_integer_dtype(self.index):
+      logger.error("Time series index must be datetime-like (e.g., pd.DatetimeIndex), not integer. "
+                   "STL decomposition requires a proper time frequency.")
       raise ValueError("Time series index must be datetime-like (e.g., pd.DatetimeIndex), not integer. "
                        "STL decomposition requires a proper time frequency.")
     ts = self.copy()
     freq = freq or ts.index.freqstr
     if period and (not isinstance(period, int) or period <= 0):
+      logger.error(f"Invalid period: {period}. Must be a positive integer.")
       raise ValueError("period must be a positive integer")
     if decimals and (not isinstance(decimals, int) or decimals < 0):
+      logger.error(f"Invalid decimals: {decimals}. Must be a non-negative integer.")
       raise ValueError("decimals must be a non-negative integer")
 
     if freq:
@@ -163,7 +171,6 @@ class _UniTimeSeriesStatistics(TimeSeriesStatistics):
       return None
 
   def adfuller(self) -> pd.Series | None:
-    from .._internal import logger
     try:
       result = adfuller(self.dropna())
       return pd.Series({"test_statistic": result[0], "p_value": result[1], "used_lag": result[2],
@@ -175,7 +182,6 @@ class _UniTimeSeriesStatistics(TimeSeriesStatistics):
 
   def acf(self, adjusted: bool = False, nlags: int = None, qstat: bool = False, fft: bool = True,
           alpha = None, bartlett_confint: bool = True, missing: str = "none"):
-    from .._internal import logger
     try:
       return acf(self.dropna(), adjusted=adjusted, nlags=nlags, qstat=qstat, fft=fft,
                  alpha=alpha, bartlett_confint=bartlett_confint, missing=missing)
@@ -184,7 +190,6 @@ class _UniTimeSeriesStatistics(TimeSeriesStatistics):
       return None
 
   def pacf(self, nlags: int = None, method: str = "ywadjusted", alpha: float = None):
-    from .._internal import logger
     try:
       return pacf(self.dropna(), nlags=nlags, method=method, alpha=alpha)
     except (ValueError, TypeError) as e:
@@ -195,8 +200,7 @@ class _UniTimeSeriesStatistics(TimeSeriesStatistics):
 class _MultiTimeSeriesStatistics(TimeSeriesStatistics):
 
   @override
-  def stl(self, period: int = None, freq: str = None, decimals: int = 4) -> dict | None:
-    from .._internal import logger
+  def stl(self, freq: str = None, period: int = None, decimals: int = 4) -> dict | None:
     trend_dict, seasonal_dict, resid_dict = {}, {}, {}
     t_strengths, s_strengths, r_strengths = {}, {}, {}
     for col in self.columns:
