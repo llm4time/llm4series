@@ -10,3 +10,4 @@ pygments-styles==0.3.0
 myst-parser==5.1.0
 nbsphinx==0.9.8
 numpydoc==1.10.0
+ipython==9.14.1
