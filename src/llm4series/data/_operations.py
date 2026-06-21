@@ -220,10 +220,20 @@ class _MultiTimeSeriesStatistics(TimeSeriesStatistics):
 class _UniTimeSeriesMetrics(TimeSeriesMetrics):
   from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 
+  def _align(self, y_pred: list[float]) -> tuple[np.ndarray, np.ndarray]:
+    # Drop positions where either the true or predicted value is NaN so both
+    # arrays stay aligned. Masking each side independently would yield arrays
+    # of different lengths and break the metric computations.
+    y_true = np.asarray(self, dtype=float)
+    y_pred = np.asarray(y_pred, dtype=float)
+    if y_true.shape != y_pred.shape:
+      raise ValueError(f"y_true and y_pred must have the same length, got {y_true.shape[0]} and {y_pred.shape[0]}.")
+    mask = ~(np.isnan(y_true) | np.isnan(y_pred))
+    return y_true[mask], y_pred[mask]
+
   @override
   def smape(self, y_pred: list[float], decimals: int = 2) -> float:
-    y_true = self[~np.isnan(self)]
-    y_pred = np.array(y_pred)[~np.isnan(y_pred)]
+    y_true, y_pred = self._align(y_pred)
     numerator = np.abs(y_true - y_pred)
     denominator = (np.abs(y_true) + np.abs(y_pred)) / 2
     epsilon = 1e-10
@@ -233,16 +243,14 @@ class _UniTimeSeriesMetrics(TimeSeriesMetrics):
   @override
   def mae(self, y_pred: list[float], decimals: int = 2) -> float:
     from sklearn.metrics import mean_absolute_error
-    y_true = self[~np.isnan(self)]
-    y_pred = np.array(y_pred)[~np.isnan(y_pred)]
+    y_true, y_pred = self._align(y_pred)
     mae = mean_absolute_error(y_true, y_pred)
     return round(mae, decimals)
 
   @override
   def rmse(self, y_pred: list[float], decimals: int = 2) -> float:
     from sklearn.metrics import root_mean_squared_error
-    y_true = self[~np.isnan(self)]
-    y_pred = np.array(y_pred)[~np.isnan(y_pred)]
+    y_true, y_pred = self._align(y_pred)
     rmse = root_mean_squared_error(y_true, y_pred)
     return round(rmse, decimals)
 
