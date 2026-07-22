@@ -11,12 +11,11 @@ def _encode_textual(ts: TimeSeries) -> TimeSeries:
       return v
     return ' '.join(str(v))
   if isinstance(ts, UniTimeSeries):
-    ts = ts.astype(object)
-    ts[:] = ts.apply(encode)
+    values = pd.Series(ts.astype(object)).map(encode)
+    ts[:] = values.to_numpy()
   elif isinstance(ts, MultiTimeSeries):
     for col in ts.num_columns:
-      ts[col] = ts[col].astype(object)
-      ts[col] = ts[col].apply(encode)
+      ts[col] = pd.Series(ts[col].astype(object)).map(encode)
   else:
     logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
@@ -31,10 +30,11 @@ def _decode_textual(ts: TimeSeries) -> TimeSeries:
       return float(s.replace(" ", ""))
     return v
   if isinstance(ts, UniTimeSeries):
-    ts = ts.apply(decode)
+    values = pd.Series(ts).map(decode)
+    ts[:] = values.to_numpy()
   elif isinstance(ts, MultiTimeSeries):
     for col in ts.columns:
-      ts[col] = ts[col].apply(decode)
+      ts[col] = pd.Series(ts[col]).map(decode)
   else:
     logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")

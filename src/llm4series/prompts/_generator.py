@@ -62,7 +62,7 @@ def prompt(
     logger.error(f"Invalid time series type: {tstype}.")
     raise ValueError(f"Supported time series types: {', '.join(get_args(ls.TSType))}.")
 
-  if sampling not in get_args(ls.Sampling):
+  if examples > 0 and (sampling not in get_args(ls.Sampling)):
     logger.error(f"Invalid sampling method: {sampling}.")
     raise ValueError(f"Supported samplings: {', '.join(get_args(ls.Sampling))}.")
 
