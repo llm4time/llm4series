@@ -62,22 +62,26 @@ def prompt(
     logger.error(f"Invalid time series type: {tstype}.")
     raise ValueError(f"Supported time series types: {', '.join(get_args(ls.TSType))}.")
 
-  if examples > 0 and (sampling not in get_args(ls.Sampling)):
-    logger.error(f"Invalid sampling method: {sampling}.")
-    raise ValueError(f"Supported samplings: {', '.join(get_args(ls.Sampling))}.")
-
   if template is None and type == "custom":
     logger.error("Template must be provided for custom prompt type.")
     raise ValueError("Template must be set for custom prompt.")
+
+  if examples < 0:
+    logger.error(f"Invalid number of examples: {examples}. Must be a non-negative integer.")
+    raise ValueError("Examples must be a non-negative integer.")
 
   if examples == 0 and type in ["few_shot", "cot_few"]:
     logger.error("Must contain at least 1 example.")
     raise ValueError("Must contain at least 1 example.")
 
   min_periods = forecast_horizon * 2 * examples
-  if len(ts) < min_periods:
+  if examples > 0 and len(ts) < min_periods:
     logger.error(f"Not enough data points: {len(ts)}. Required at least {min_periods} for {examples} examples and forecast horizon of {forecast_horizon}.")
     raise ValueError(f"For {examples} examples there must be {min_periods} periods in the time series.")
+
+  if examples > 0 and (sampling not in get_args(ls.Sampling)):
+    logger.error(f"Invalid sampling method: {sampling}.")
+    raise ValueError(f"Supported samplings: {', '.join(get_args(ls.Sampling))}.")
 
   if decimals <= 0:
     logger.error(f"Invalid decimals: {decimals}. Must be a non-negative integer.")
@@ -127,7 +131,7 @@ def prompt(
     logger.error(f"Unsupported time series type: {type(ts).__name__}.")
     raise TypeError(f"Expected TimeSeries, got {type(ts).__name__}.")
 
-  if "forecast_examples" not in kwargs:
+  if examples > 0 and "forecast_examples" not in kwargs:
     forecast_examples = "\n".join([
         f"- Example {i}:\n"
         f"Input (history):\n{input.to_str(tsformat, tstype)}\n\n"
