@@ -11,8 +11,7 @@ def _encode_textual(ts: TimeSeries) -> TimeSeries:
       return v
     return ' '.join(str(v))
   if isinstance(ts, UniTimeSeries):
-    values = pd.Series(ts.astype(object)).map(encode)
-    ts[:] = values.to_numpy()
+    ts = ts.map(encode)
   elif isinstance(ts, MultiTimeSeries):
     for col in ts.num_columns:
       ts[col] = pd.Series(ts[col].astype(object)).map(encode)
@@ -31,7 +30,7 @@ def _decode_textual(ts: TimeSeries) -> TimeSeries:
     return v
   if isinstance(ts, UniTimeSeries):
     values = pd.Series(ts).map(decode)
-    ts[:] = values.to_numpy()
+    return UniTimeSeries(values, index=ts.index, name=ts.name)
   elif isinstance(ts, MultiTimeSeries):
     for col in ts.columns:
       ts[col] = pd.Series(ts[col]).map(decode)
